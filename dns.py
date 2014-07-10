@@ -517,6 +517,7 @@ class GenericSocket(object):
     def close(self):
         raise NotImplementedError()
 
+
 class GenericConnection(object):
 
     remote_address = None
@@ -581,13 +582,13 @@ class TCPv4Socket(GenericSocket):
     def receive(self):
         while self.open:
             try:
-	        connection, address = self.socket.accept()
+                connection, address = self.socket.accept()
                 data = connection.recv(1024)
-	    except socket.timeout:
+            except socket.timeout:
                 pass
             else:
-	        # data[0:1] is request length on TCP
-	        return data[2:], TCPConnection(self, connection, address[0], address[1])
+                # data[0:1] is request length on TCP
+                return data[2:], TCPConnection(self, connection, address[0], address[1])
 
     def close(self):
         self.open = False
@@ -645,15 +646,16 @@ class DNSServer(Thread):
     def start(self):
         self.__started = True
         super(DNSServer, self).start()
-	return self
+        return self
 
     def stop(self):
         self.__started = False
         self.socket_facade.close()
-	return self
+        return self
 
     def lookup(self, request, response):
         raise NotImplementedError("DNSServer.answer is not implemented")
+
 
 class SampleDNSServer(DNSServer):
 
@@ -661,7 +663,7 @@ class SampleDNSServer(DNSServer):
 
         assert isinstance(request, DNSRequest)
         assert isinstance(response, DNSResponse)
-        
+
         # # Examples:
         # response.answer_a("127.0.0.1", record_ttl=0)
         # response.answer_mx("mx.localhost", priority=20)
