@@ -1,6 +1,7 @@
 __author__ = 'Frank Epperlein'
 
 import socket
+import logging
 from threading import Thread
 
 
@@ -516,7 +517,6 @@ class GenericSocket(object):
     def close(self):
         raise NotImplementedError()
 
-
 class GenericConnection(object):
 
     remote_address = None
@@ -534,13 +534,19 @@ class UPDv4Socket(GenericSocket):
 
     def __init__(self, address='0.0.0.0', port=53):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.settimeout(1)
         self.socket.bind((address, port))
         self.open = True
         self.type = "UPDv4"
 
     def receive(self):
-        data, address = self.socket.recvfrom(1024)
-        return data, UPDConnection(self, address[0], address[1])
+        while self.open:
+            try:
+                data, address = self.socket.recvfrom(1024)
+            except socket.timeout:
+                pass
+            else:
+                return data, UPDConnection(self, address[0], address[1])
 
     def close(self):
         self.open = False
@@ -566,16 +572,22 @@ class TCPv4Socket(GenericSocket):
 
     def __init__(self, address='0.0.0.0', port=53):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.settimeout(1)
         self.socket.bind((address, port))
         self.socket.listen(1)
         self.open = True
         self.type = "TCPv4"
 
     def receive(self):
-        connection, address = self.socket.accept()
-        data = connection.recv(1024)
-        # data[0:1] is request length on TCP
-        return data[2:], TCPConnection(self, connection, address[0], address[1])
+        while self.open:
+            try:
+	        connection, address = self.socket.accept()
+                data = connection.recv(1024)
+	    except socket.timeout:
+                pass
+            else:
+	        # data[0:1] is request length on TCP
+	        return data[2:], TCPConnection(self, connection, address[0], address[1])
 
     def close(self):
         self.open = False
@@ -608,26 +620,40 @@ class DNSServer(Thread):
         super(DNSServer, self).__init__()
         assert isinstance(socket_facade, GenericSocket)
         self.socket_facade = socket_facade
+        self.__started = False
 
     def run(self):
 
         try:
-            while True:
+
+            while self.__started:
                 try:
-                    data, connection = self.socket_facade.receive()
+                    request_data = self.socket_facade.receive()
+                    if request_data:
+                        data, connection = request_data
+                        resolver = DNSResolver(connection, data, self.lookup)
+                        resolver.start()
                 except Exception, e:
-                    print e
-                    continue  # closed by client
-                resolver = DNSResolver(connection, data, self.lookup)
-                resolver.start()
+                    logging.debug(e)
+                    continue
+
         except KeyboardInterrupt:
             pass
         finally:
             self.socket_facade.close()
 
+    def start(self):
+        self.__started = True
+        super(DNSServer, self).start()
+	return self
+
+    def stop(self):
+        self.__started = False
+        self.socket_facade.close()
+	return self
+
     def lookup(self, request, response):
         raise NotImplementedError("DNSServer.answer is not implemented")
-
 
 class SampleDNSServer(DNSServer):
 
