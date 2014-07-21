@@ -509,13 +509,16 @@ class GenericSocket(object):
 
     socket = None
     open = False
-    type = None
 
     def receive(self):
         raise NotImplementedError()
 
     def close(self):
         raise NotImplementedError()
+
+    @property
+    def type(self):
+        return self.__class__.__name__[:5]
 
 
 class GenericConnection(object):
