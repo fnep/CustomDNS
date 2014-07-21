@@ -534,14 +534,7 @@ class GenericConnection(object):
         raise NotImplementedError()
 
 
-class UPDv4Socket(GenericSocket):
-
-    def __init__(self, address='0.0.0.0', port=53):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.settimeout(1)
-        self.socket.bind((address, port))
-        self.open = True
-        self.type = "UPDv4"
+class GenericUPDSocket(GenericSocket):
 
     def receive(self):
         while self.open:
@@ -555,6 +548,24 @@ class UPDv4Socket(GenericSocket):
     def close(self):
         self.open = False
         return self.socket.close()
+
+
+class UPDv4Socket(GenericUPDSocket):
+
+    def __init__(self, address='0.0.0.0', port=53):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.settimeout(1)
+        self.socket.bind((address, port))
+        self.open = True
+
+
+class UDPv6Socket(GenericUPDSocket):
+
+    def __init__(self, address='::0', port=53):
+        self.socket = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+        self.socket.settimeout(1)
+        self.socket.bind((address, port))
+        self.open = True
 
 
 class UPDConnection(GenericConnection):
@@ -572,15 +583,7 @@ class UPDConnection(GenericConnection):
         pass
 
 
-class TCPv4Socket(GenericSocket):
-
-    def __init__(self, address='0.0.0.0', port=53):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.settimeout(1)
-        self.socket.bind((address, port))
-        self.socket.listen(1)
-        self.open = True
-        self.type = "TCPv4"
+class GenericTCPSocket(GenericSocket):
 
     def receive(self):
         while self.open:
@@ -596,6 +599,26 @@ class TCPv4Socket(GenericSocket):
     def close(self):
         self.open = False
         return self.socket.close()
+
+
+class TCPv4Socket(GenericTCPSocket):
+
+    def __init__(self, address='0.0.0.0', port=53):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.settimeout(1)
+        self.socket.bind((address, port))
+        self.socket.listen(1)
+        self.open = True
+
+
+class TCPv6Socket(GenericTCPSocket):
+
+    def __init__(self, address='::0', port=53):
+        self.socket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        self.socket.settimeout(1)
+        self.socket.bind((address, port))
+        self.socket.listen(1)
+        self.open = True
 
 
 class TCPConnection(GenericConnection):
@@ -705,6 +728,8 @@ class SampleDNSServer(DNSServer):
 def main():
     SampleDNSServer(UPDv4Socket()).start()
     SampleDNSServer(TCPv4Socket()).start()
+    SampleDNSServer(TCPv6Socket()).start()
+    SampleDNSServer(UDPv6Socket()).start()
 
 
 if __name__ == '__main__':
